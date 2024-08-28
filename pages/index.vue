@@ -29,7 +29,7 @@
 </template>
 
 <script setup>
-const textAreaInput = ref('333|333,543|234,453|234')
+const textAreaInput = ref('')
 const units = ref({
   spear: 0,
   sword: 0,
@@ -39,6 +39,9 @@ const units = ref({
   heavy: 0,
 })
 const results = computed(() => {
+  const allUnitsZero = Object.values(units.value).every((value) => value === 0)
+  if (allUnitsZero) return null
+
   const cibles = textAreaInput.value.match(/\d{3}\|\d{3}/g)
   if (!cibles) return null
 
