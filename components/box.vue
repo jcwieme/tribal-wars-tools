@@ -1,6 +1,8 @@
 <template>
   <div class="box">
-    <h2 v-if="title">{{ title }}</h2>
+    <h2 v-if="title">
+      {{ title }} <button v-if="button" @click="emit('clicked')">{{ button }}</button>
+    </h2>
     <div class="slot">
       <slot />
     </div>
@@ -8,7 +10,8 @@
 </template>
 
 <script setup>
-const { title } = defineProps(['title'])
+const { title, button } = defineProps(['title', 'button'])
+const emit = defineEmits(['clicked'])
 </script>
 
 <style>
@@ -29,6 +32,8 @@ h2 {
   padding: 3px;
   border-bottom: 1px solid #d2b487;
   padding: 5px 10px;
+  display: flex;
+  justify-content: space-between;
 }
 
 .slot {
@@ -36,5 +41,17 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+button {
+  border: none;
+  background: transparent;
+  font-weight: 700;
+  cursor: pointer;
+  color: #804000;
+}
+
+button:hover {
+  color: #0082be;
 }
 </style>

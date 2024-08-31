@@ -14,7 +14,7 @@
         </div>
       </div>
     </Box>
-    <Box title="Result">
+    <Box title="Result" :button="button" @clicked="copyBBCode">
       <div v-if="results">
         <div v-for="result in results" :key="result.cible">
           <h3>{{ result.cible }}</h3>
@@ -29,6 +29,7 @@
 </template>
 
 <script setup>
+const isCopied = ref(false)
 const textAreaInput = ref('')
 const units = ref({
   spear: 0,
@@ -66,6 +67,28 @@ const results = computed(() => {
     }
   })
 })
+const button = computed(() => (results.value ? (isCopied.value ? 'BBCode copié!' : 'Copier le BBCode') : null))
+
+const copyBBCode = () => {
+  const bbCode = results.value
+    .map((result) => {
+      const units = Object.entries(result.units)
+        .map(([key, value]) => `[unit]${key}[/unit] ${value}`)
+        .join(' - ')
+      return `${result.cible}\n${units}`
+    })
+    .join('\n\n')
+
+  navigator.clipboard.writeText(bbCode)
+  isCopied.value = true
+  setTimeout(() => {
+    isCopied.value = false
+  }, 2000)
+}
+// player ID + name
+// How to get player id ?
+// https://fr89.guerretribale.fr/game.php?screen=mail&mode=new&player=1760165&name=Palou1983
+// https://fr89.guerretribale.fr/map/player.txt
 </script>
 
 <style>
