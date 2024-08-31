@@ -120,55 +120,33 @@ const copyBBCode = () => {
 
 // Fetch and convert the ally and player data
 onMounted(async () => {
-  const ally = await fetchAndConvertToJSON('https://fr89.guerretribale.fr/map/ally.txt', 'ally')
-  const player = await fetchAndConvertToJSON('https://fr89.guerretribale.fr/map/player.txt', 'player')
+  const ally = await fetch('/web-api/fetch-data', {
+    method: 'POST',
+    credentials: 'omit',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ url: 'https://fr89.guerretribale.fr/map/ally.txt', type: 'ally' }),
+  }).then((res) => res.json())
+
+  const playersList = await fetch('/web-api/fetch-data', {
+    method: 'POST',
+    credentials: 'omit',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ url: 'https://fr89.guerretribale.fr/map/player.txt', type: 'player' }),
+  }).then((res) => res.json())
+
+  console.log(playersList, ally)
+
   allies.value = ally.sort(function (a, b) {
     return a.tag.localeCompare(b.tag)
   })
-  players.value = player
+  players.value = playersList
 })
-async function fetchAndConvertToJSON(url, type) {
-  try {
-    // Fetch the text file from the URL
-    const response = await fetch(url)
-    const textData = await response.text()
-
-    // Split the text into lines
-    const lines = textData.trim().split('\n')
-
-    // Convert lines to JSON
-    const jsonArray = type === 'ally' ? mapAlly(lines) : mapPlayer(lines)
-
-    // Log the JSON result to the console
-    return jsonArray
-  } catch (error) {
-    console.error('Error fetching or processing the file:', error)
-  }
-}
-
-const mapAlly = (lines) => {
-  return lines.map((line) => {
-    const [id, name, tag] = line.split(',')
-
-    return {
-      id: parseInt(id),
-      name: decodeURIComponent(name.replace(/\+/g, ' ')),
-      tag: decodeURIComponent(tag.replace(/\+/g, ' ')),
-    }
-  })
-}
-
-const mapPlayer = (lines) => {
-  return lines.map((line) => {
-    const [id, name, tribe_id] = line.split(',')
-
-    return {
-      id: parseInt(id),
-      name: decodeURIComponent(name.replace(/\+/g, ' ')),
-      tribe_id: parseInt(tribe_id),
-    }
-  })
-}
 
 // player ID + name
 // How to get player id ?
