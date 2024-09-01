@@ -103,7 +103,6 @@ const copyBBCode = () => {
     .join('\n\n')
 
   navigator.clipboard.writeText(bbCode)
-  // https://fr89.guerretribale.fr/game.php?screen=mail&mode=new&player=1760165&name=Palou1983
   // open the mail page with the player id and name
   if (selectedPlayer.value) {
     const name = players.value.find((player) => player.id === selectedPlayer.value).name
@@ -120,39 +119,35 @@ const copyBBCode = () => {
 
 // Fetch and convert the ally and player data
 onMounted(async () => {
-  const ally = await fetch('/web-api/fetch-data', {
-    method: 'POST',
-    credentials: 'omit',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ url: 'https://fr89.guerretribale.fr/map/ally.txt', type: 'ally' }),
-  }).then((res) => res.json())
+  try {
+    const ally = await fetch('/web-api/fetch-data', {
+      method: 'POST',
+      credentials: 'omit',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url: 'https://fr89.guerretribale.fr/map/ally.txt', type: 'ally' }),
+    }).then((res) => res.json())
 
-  const playersList = await fetch('/web-api/fetch-data', {
-    method: 'POST',
-    credentials: 'omit',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ url: 'https://fr89.guerretribale.fr/map/player.txt', type: 'player' }),
-  }).then((res) => res.json())
+    const playersList = await fetch('/web-api/fetch-data', {
+      method: 'POST',
+      credentials: 'omit',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url: 'https://fr89.guerretribale.fr/map/player.txt', type: 'player' }),
+    }).then((res) => res.json())
 
-  console.log(playersList, ally)
-
-  allies.value = ally.sort(function (a, b) {
-    return a.tag.localeCompare(b.tag)
-  })
-  players.value = playersList
+    allies.value = ally.sort(function (a, b) {
+      return a.tag.localeCompare(b.tag)
+    })
+    players.value = playersList
+  } catch (error) {
+    console.error(error)
+  }
 })
-
-// player ID + name
-// How to get player id ?
-// https://fr89.guerretribale.fr/game.php?screen=mail&mode=new&player=1760165&name=Palou1983
-// https://fr89.guerretribale.fr/map/player.txt
-// https://fr89.guerretribale.fr/map/ally.txt
 </script>
 
 <style>
