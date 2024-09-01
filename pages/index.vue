@@ -43,8 +43,6 @@
 </template>
 
 <script setup>
-import { onMounted, watch } from 'vue'
-
 const isCopied = ref(false)
 const textAreaInput = ref('')
 const units = ref({
@@ -139,6 +137,8 @@ onMounted(async () => {
       },
       body: JSON.stringify({ url: 'https://fr89.guerretribale.fr/map/player.txt', type: 'player' }),
     }).then((res) => res.json())
+
+    if (!ally || !playersList) return
 
     allies.value = ally.sort(function (a, b) {
       return a.tag.localeCompare(b.tag)
