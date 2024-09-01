@@ -2,11 +2,13 @@
   <div class="def">
     <Box title="Inputs">
       <div class="input">
-        <label for="cibles"> Tribu: </label>
-        <select id="tribu" name="tribu" v-model="selectedAlly">
-          <option value="">Choisir une tribu</option>
-          <option v-for="ally in allies" :key="ally.id" :value="ally.id">{{ ally.tag }}</option>
-        </select>
+        <label for="cibles"> Tribu tag: </label>
+        <input type="text" id="tribu" name="tribu" v-model="searchAlly" />
+        <ul class="propositions" v-if="searchList.length">
+          <li v-for="ally in searchList" :key="ally.id" @click="selectAlly(ally)">
+            {{ ally.tag }}
+          </li>
+        </ul>
       </div>
       <div class="input" v-if="filteredPlayers.length">
         <label for="cibles"> Joueur: </label>
@@ -24,7 +26,7 @@
           <label :for="key">
             <img :src="`/units/unit_${key}.png`" :alt="key" />
           </label>
-          <input type="number" :name="key" :id="key" v-model="units[key]" />
+          <input type="number" :name="key" :id="key" v-model.number="units[key]" />
         </div>
       </div>
     </Box>
@@ -43,6 +45,35 @@
 </template>
 
 <script setup>
+/* Player logic */
+const players = ref([])
+const selectedPlayer = ref('')
+const filteredPlayers = computed(() => {
+  return selectedAlly.value ? players.value.filter((player) => player.tribe_id === selectedAlly.value.id) : []
+})
+
+/* Tribe logic */
+const allies = ref([])
+const selectedAlly = ref(null)
+const searchAlly = ref('')
+const searchList = computed(() =>
+  searchAlly.value.length >= 2 && (!selectedAlly.value || selectedAlly.value.tag !== searchAlly.value)
+    ? allies.value.filter((ally) => ally.tag.toLowerCase().includes(searchAlly.value.toLowerCase())).slice(0, 3)
+    : []
+)
+
+const selectAlly = (ally) => {
+  searchAlly.value = ally.tag
+  selectedAlly.value = ally
+}
+
+watch(searchAlly, () => {
+  if (selectedAlly.value && selectedAlly.value.tag !== searchAlly.value) {
+    selectedAlly.value = null
+  }
+})
+
+/* Calculator logic */
 const isCopied = ref(false)
 const textAreaInput = ref('')
 const units = ref({
@@ -54,8 +85,7 @@ const units = ref({
   heavy: 0,
 })
 const results = computed(() => {
-  const allUnitsZero = Object.values(units.value).every((value) => value === 0)
-  if (allUnitsZero) return null
+  if (Object.values(units.value).every((value) => value === 0)) return null
 
   const cibles = textAreaInput.value.match(/\d{3}\|\d{3}/g)
   if (!cibles) return null
@@ -68,27 +98,16 @@ const results = computed(() => {
 
   const remainder = Object.fromEntries(Object.entries(units.value).map(([key, value]) => [key, value % totalCibles]))
 
-  return cibles.map((cible, index) => {
-    const filteredUnits = Object.fromEntries(
+  return cibles.map((cible, index) => ({
+    cible,
+    units: Object.fromEntries(
       Object.entries(unitsPerCible)
         .map(([key, value]) => [key, value + (index === 0 ? remainder[key] : 0)])
         .filter(([, value]) => value > 0)
-    )
-
-    return {
-      cible,
-      units: filteredUnits,
-    }
-  })
+    ),
+  }))
 })
 const button = computed(() => (results.value ? (isCopied.value ? 'BBCode copié!' : 'Copier le BBCode') : null))
-const players = ref([])
-const allies = ref([])
-const selectedAlly = ref('')
-const selectedPlayer = ref('')
-const filteredPlayers = computed(() => {
-  return players.value.filter((player) => player.tribe_id === selectedAlly.value)
-})
 
 const copyBBCode = () => {
   const bbCode = results.value
@@ -115,34 +134,33 @@ const copyBBCode = () => {
   }, 2000)
 }
 
-// Fetch and convert the ally and player data
+/* Fetch and convert the ally and player data */
 onMounted(async () => {
   try {
-    const ally = await fetch('/web-api/fetch-data', {
-      method: 'POST',
-      credentials: 'omit',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ url: 'https://fr89.guerretribale.fr/map/ally.txt', type: 'ally' }),
-    }).then((res) => res.json())
-
-    const playersList = await fetch('/web-api/fetch-data', {
-      method: 'POST',
-      credentials: 'omit',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ url: 'https://fr89.guerretribale.fr/map/player.txt', type: 'player' }),
-    }).then((res) => res.json())
+    const [ally, playersList] = await Promise.all([
+      fetch('/web-api/fetch-data', {
+        method: 'POST',
+        credentials: 'omit',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: 'https://fr89.guerretribale.fr/map/ally.txt', type: 'ally' }),
+      }).then((res) => res.json()),
+      fetch('/web-api/fetch-data', {
+        method: 'POST',
+        credentials: 'omit',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: 'https://fr89.guerretribale.fr/map/player.txt', type: 'player' }),
+      }).then((res) => res.json()),
+    ])
 
     if (!ally || !playersList) return
 
-    allies.value = ally.sort(function (a, b) {
-      return a.tag.localeCompare(b.tag)
-    })
+    allies.value = ally.sort((a, b) => a.tag.localeCompare(b.tag))
     players.value = playersList
   } catch (error) {
     console.error(error)
@@ -160,6 +178,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 5px;
+  position: relative;
 }
 .unit {
   display: flex;
@@ -169,5 +188,30 @@ onMounted(async () => {
 img {
   height: 100%;
   width: auto;
+}
+.propositions {
+  position: absolute;
+  border: 1px solid #aaa;
+  background: #fbf3df;
+  border-radius: 4px;
+  overflow-y: auto;
+  width: 100%;
+  z-index: 1;
+  bottom: 0;
+  transform: translateY(calc(100% + 18px));
+  list-style: none;
+  padding: 5px;
+}
+.propositions li {
+  cursor: pointer;
+  padding: 10px 5px;
+  font-size: 10px;
+  line-height: 12px;
+  border: 1px solid transparent;
+}
+.propositions li:hover {
+  border: 1px solid #999;
+  background: #f0d69a;
+  border-radius: 4px;
 }
 </style>
