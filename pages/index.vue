@@ -56,7 +56,7 @@ const filteredPlayers = computed(() => {
 const selectedAllyCookie = useCookie('selected_ally')
 const allies = ref([])
 const selectedAlly = ref(selectedAllyCookie.value || null)
-const searchAlly = ref(selectedAllyCookie.value.tag || '')
+const searchAlly = ref(selectedAllyCookie.value?.tag || '')
 const searchList = computed(() =>
   searchAlly.value.length >= 2 && (!selectedAlly.value || selectedAlly.value.tag !== searchAlly.value)
     ? allies.value.filter((ally) => ally.tag.toLowerCase().includes(searchAlly.value.toLowerCase())).slice(0, 3)
