@@ -201,7 +201,6 @@ onMounted(async () => {
       }
     }
     textAreaInput.value = params.coords
-    console.log(params)
   } catch (error) {
     console.error(error)
   }
