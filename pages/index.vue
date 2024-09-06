@@ -2,6 +2,12 @@
   <div class="def">
     <Box title="Inputs">
       <div class="input">
+        <label for="cibles"> Serveur: </label>
+        <select id="joueur" name="joueur" v-model="selectedServer">
+          <option v-for="server in servers" :key="server" :value="server">{{ server }}</option>
+        </select>
+      </div>
+      <div class="input">
         <label for="cibles"> Tribu tag: </label>
         <input type="text" id="tribu" name="tribu" v-model="searchAlly" />
         <ul class="propositions" v-if="searchList.length">
@@ -48,15 +54,15 @@
 /* Player logic */
 const players = ref([])
 const selectedPlayer = ref('')
-const filteredPlayers = computed(() => {
-  return selectedAlly.value ? players.value.filter((player) => player.tribe_id === selectedAlly.value.id) : []
-})
+const filteredPlayers = computed(() =>
+  selectedAlly.value ? players.value.filter((player) => player.tribe_id === selectedAlly.value.id) : []
+)
 
 /* Tribe logic */
-const selectedAllyCookie = useCookie('selected_ally')
 const allies = ref([])
-const selectedAlly = ref(selectedAllyCookie.value || null)
-const searchAlly = ref(selectedAllyCookie.value?.tag || '')
+const selectedAlly = ref(null)
+const searchAlly = ref('')
+
 const searchList = computed(() =>
   searchAlly.value.length >= 2 && (!selectedAlly.value || selectedAlly.value.tag !== searchAlly.value)
     ? allies.value.filter((ally) => ally.tag.toLowerCase().includes(searchAlly.value.toLowerCase())).slice(0, 3)
@@ -66,11 +72,10 @@ const searchList = computed(() =>
 const selectAlly = (ally) => {
   searchAlly.value = ally.tag
   selectedAlly.value = ally
-  selectedAllyCookie.value = ally
 }
 
 watch(searchAlly, () => {
-  if (selectedAlly.value && selectedAlly.value.tag !== searchAlly.value) {
+  if (selectedAlly.value?.tag !== searchAlly.value) {
     selectedAlly.value = null
   }
 })
@@ -87,6 +92,7 @@ const units = ref({
   heavy: 0,
   catapult: 0,
 })
+
 const results = computed(() => {
   if (Object.values(units.value).every((value) => value === 0)) return null
 
@@ -94,11 +100,9 @@ const results = computed(() => {
   if (!cibles) return null
 
   const totalCibles = cibles.length
-
   const unitsPerCible = Object.fromEntries(
     Object.entries(units.value).map(([key, value]) => [key, Math.floor(value / totalCibles)])
   )
-
   const remainder = Object.fromEntries(Object.entries(units.value).map(([key, value]) => [key, value % totalCibles]))
 
   return cibles.map((cible, index) => ({
@@ -110,25 +114,28 @@ const results = computed(() => {
     ),
   }))
 })
+
 const button = computed(() => (results.value ? (isCopied.value ? 'BBCode copié!' : 'Copier le BBCode') : null))
 
 const copyBBCode = () => {
   const bbCode = results.value
     .map((result) => {
-      const units = Object.entries(result.units)
+      const unitsText = Object.entries(result.units)
         .map(([key, value]) => `[unit]${key}[/unit] ${value}`)
         .join(' - ')
-      return `${result.cible}\n${units}`
+      return `${result.cible}\n${unitsText}`
     })
     .join('\n\n')
 
   navigator.clipboard.writeText(bbCode)
-  // open the mail page with the player id and name
+
   if (selectedPlayer.value) {
-    const name = players.value.find((player) => player.id === selectedPlayer.value).name
-    window.open(
-      `https://fr89.guerretribale.fr/game.php?screen=mail&mode=new&player=${selectedPlayer.value}&name=${name}`
-    )
+    const player = players.value.find((player) => player.id === selectedPlayer.value)
+    if (player) {
+      window.open(
+        `https://${selectedServer.value}.guerretribale.fr/game.php?screen=mail&mode=new&player=${selectedPlayer.value}&name=${player.name}`
+      )
+    }
   }
 
   isCopied.value = true
@@ -137,37 +144,58 @@ const copyBBCode = () => {
   }, 2000)
 }
 
-/* Fetch and convert the ally and player data */
-onMounted(async () => {
+/* Fetch data logic */
+const servers = ref({})
+const selectedServer = ref('fr89')
+
+const fetchData = async (url, type) => {
   try {
-    const [ally, playersList] = await Promise.all([
-      fetch('/web-api/fetch-data', {
-        method: 'POST',
-        credentials: 'omit',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: 'https://fr89.guerretribale.fr/map/ally.txt', type: 'ally' }),
-      }).then((res) => res.json()),
-      fetch('/web-api/fetch-data', {
-        method: 'POST',
-        credentials: 'omit',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: 'https://fr89.guerretribale.fr/map/player.txt', type: 'player' }),
-      }).then((res) => res.json()),
+    const res = await fetch('/web-api/fetch-data', {
+      method: 'POST',
+      credentials: 'omit',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url, type }),
+    })
+    return await res.json()
+  } catch (error) {
+    console.error(`Error fetching ${type}:`, error)
+    return null
+  }
+}
+
+const loadServerData = async () => {
+  try {
+    const [allyData, playersData] = await Promise.all([
+      fetchData(`https://${selectedServer.value}.guerretribale.fr/map/ally.txt`, 'ally'),
+      fetchData(`https://${selectedServer.value}.guerretribale.fr/map/player.txt`, 'player'),
     ])
 
-    if (!ally || !playersList) return
+    if (!allyData || !playersData) return
 
-    allies.value = ally.sort((a, b) => a.tag.localeCompare(b.tag))
-    players.value = playersList
+    allies.value = allyData.sort((a, b) => a.tag.localeCompare(b.tag))
+    players.value = playersData
+  } catch (error) {
+    console.error('Error loading server data:', error)
+  }
+}
 
-    // http://localhost:3000/?tribe=mal-b2&spear=595&sword=707&archer=269&spy=236&heavy=138&cata=0&player=Ablette&coords=345%7C321,456%7C123,324%7C123
+watch(selectedServer, () => {
+  if (selectedServer.value) {
+    selectedAlly.value = null
+    searchAlly.value = ''
+    loadServerData()
+  }
+})
+
+/* Fetch and convert ally and player data */
+onMounted(async () => {
+  try {
     const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.size === 0) return
+
     const params = {
       tribe: urlParams.get('tribe'),
       spear: urlParams.get('spear'),
@@ -178,7 +206,17 @@ onMounted(async () => {
       cata: urlParams.get('cata'),
       player: urlParams.get('player'),
       coords: urlParams.get('coords'),
+      server: urlParams.get('world'),
     }
+
+    const serverData = await fetchData('https://www.guerretribale.fr/backend/get_servers.php', 'server')
+    if (serverData) {
+      servers.value = serverData
+      selectedServer.value = servers.value.find((server) => server.includes(params.server)) || 'fr89'
+    }
+
+    await loadServerData()
+
     units.value = {
       spear: params.spear || 0,
       sword: params.sword || 0,
@@ -188,21 +226,23 @@ onMounted(async () => {
       heavy: params.heavy || 0,
       catapult: params.cata || 0,
     }
-    const selectedFromParamsAlly = allies.value.find((ally) => ally.tag.toLowerCase() === params.tribe.toLowerCase())
-    if (selectedFromParamsAlly) {
-      selectedAlly.value = selectedFromParamsAlly
-      searchAlly.value = selectedFromParamsAlly.tag
 
-      const selectedFromParamsPlayer = players.value.find((player) =>
+    const selectedAllyFromParams = allies.value.find((ally) => ally.tag.toLowerCase() === params.tribe.toLowerCase())
+    if (selectedAllyFromParams) {
+      selectedAlly.value = selectedAllyFromParams
+      searchAlly.value = selectedAllyFromParams.tag
+
+      const selectedPlayerFromParams = players.value.find((player) =>
         player.name.toLowerCase().includes(params.player.toLowerCase())
       )
-      if (selectedFromParamsPlayer) {
-        selectedPlayer.value = selectedFromParamsPlayer.id
+      if (selectedPlayerFromParams) {
+        selectedPlayer.value = selectedPlayerFromParams.id
       }
     }
+
     textAreaInput.value = params.coords
   } catch (error) {
-    console.error(error)
+    console.error('Error on mount:', error)
   }
 })
 </script>
