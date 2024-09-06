@@ -85,6 +85,7 @@ const units = ref({
   spy: 0,
   marcher: 0,
   heavy: 0,
+  catapult: 0,
 })
 const results = computed(() => {
   if (Object.values(units.value).every((value) => value === 0)) return null
@@ -164,6 +165,43 @@ onMounted(async () => {
 
     allies.value = ally.sort((a, b) => a.tag.localeCompare(b.tag))
     players.value = playersList
+
+    // http://localhost:3000/?tribe=mal-b2&spear=595&sword=707&archer=269&spy=236&heavy=138&cata=0&player=Ablette&coords=345%7C321,456%7C123,324%7C123
+    const urlParams = new URLSearchParams(window.location.search)
+    const params = {
+      tribe: urlParams.get('tribe'),
+      spear: urlParams.get('spear'),
+      sword: urlParams.get('sword'),
+      archer: urlParams.get('archer'),
+      spy: urlParams.get('spy'),
+      heavy: urlParams.get('heavy'),
+      cata: urlParams.get('cata'),
+      player: urlParams.get('player'),
+      coords: urlParams.get('coords'),
+    }
+    units.value = {
+      spear: params.spear || 0,
+      sword: params.sword || 0,
+      archer: params.archer || 0,
+      spy: params.spy || 0,
+      marcher: 0,
+      heavy: params.heavy || 0,
+      catapult: params.cata || 0,
+    }
+    const selectedFromParamsAlly = allies.value.find((ally) => ally.tag.toLowerCase() === params.tribe.toLowerCase())
+    if (selectedFromParamsAlly) {
+      selectedAlly.value = selectedFromParamsAlly
+      searchAlly.value = selectedFromParamsAlly.tag
+
+      const selectedFromParamsPlayer = players.value.find((player) =>
+        player.name.toLowerCase().includes(params.player.toLowerCase())
+      )
+      if (selectedFromParamsPlayer) {
+        selectedPlayer.value = selectedFromParamsPlayer.id
+      }
+    }
+    textAreaInput.value = params.coords
+    console.log(params)
   } catch (error) {
     console.error(error)
   }
