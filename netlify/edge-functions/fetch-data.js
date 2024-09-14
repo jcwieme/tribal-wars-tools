@@ -40,7 +40,6 @@ export default async (req, res) => {
   }
   const passedValue = await new Response(req.body).text()
   const { type, url } = JSON.parse(passedValue)
-  console.log(type, url)
 
   try {
     // Fetch the text file from the URL

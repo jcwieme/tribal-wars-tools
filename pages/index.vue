@@ -65,7 +65,7 @@ const searchAlly = ref('')
 
 const searchList = computed(() =>
   searchAlly.value.length >= 2 && (!selectedAlly.value || selectedAlly.value.tag !== searchAlly.value)
-    ? allies.value.filter((ally) => ally.tag.toLowerCase().includes(searchAlly.value.toLowerCase())).slice(0, 3)
+    ? allies.value.filter((ally) => ally.tag?.toLowerCase().includes(searchAlly.value?.toLowerCase())).slice(0, 3)
     : []
 )
 
@@ -194,7 +194,6 @@ watch(selectedServer, () => {
 onMounted(async () => {
   try {
     const urlParams = new URLSearchParams(window.location.search)
-    if (urlParams.size === 0) return
 
     const params = {
       tribe: urlParams.get('tribe'),
@@ -227,13 +226,13 @@ onMounted(async () => {
       catapult: params.cata || 0,
     }
 
-    const selectedAllyFromParams = allies.value.find((ally) => ally.tag.toLowerCase() === params.tribe.toLowerCase())
+    const selectedAllyFromParams = allies.value.find((ally) => ally.tag?.toLowerCase() === params.tribe?.toLowerCase())
     if (selectedAllyFromParams) {
       selectedAlly.value = selectedAllyFromParams
       searchAlly.value = selectedAllyFromParams.tag
 
       const selectedPlayerFromParams = players.value.find((player) =>
-        player.name.toLowerCase().includes(params.player.toLowerCase())
+        player.name?.toLowerCase().includes(params.player?.toLowerCase())
       )
       if (selectedPlayerFromParams) {
         selectedPlayer.value = selectedPlayerFromParams.id
