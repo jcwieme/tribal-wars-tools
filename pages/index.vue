@@ -232,7 +232,7 @@ onMounted(async () => {
       searchAlly.value = selectedAllyFromParams.tag
 
       const selectedPlayerFromParams = players.value.find((player) =>
-        player.name?.toLowerCase().includes(params.player?.toLowerCase())
+        player.name?.toLowerCase().includes(params.player?.toLowerCase().trim())
       )
       if (selectedPlayerFromParams) {
         selectedPlayer.value = selectedPlayerFromParams.id
