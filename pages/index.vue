@@ -94,7 +94,7 @@ const units = ref({
 })
 
 const results = computed(() => {
-  if (Object.values(units.value).every((value) => value === 0)) return null
+  if (Object.values(units.value).every((value) => value === 0) || !textAreaInput.value) return null
 
   const cibles = textAreaInput.value.match(/\d{3}\|\d{3}/g)
   if (!cibles) return null
@@ -207,6 +207,8 @@ onMounted(async () => {
       coords: urlParams.get('coords'),
       server: urlParams.get('world'),
     }
+
+    console.log(params.coords)
 
     const serverData = await fetchData('https://www.guerretribale.fr/backend/get_servers.php', 'server')
     if (serverData) {
